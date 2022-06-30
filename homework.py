@@ -40,7 +40,7 @@ HOMEWORK_STATUSES = {
 
 def send_message(bot, message):
     try:
-        bot.send_message(TELEGRAM_CHAT_ID, message) 
+        bot.send_message(TELEGRAM_CHAT_ID, message)
         logger.info(f'Сообщение отправлено: {message}')
     except Exception as e:
         logger.error(f'Сообщение не отправлено, ошибка : {e}')
@@ -52,7 +52,7 @@ def get_api_answer(current_timestamp):
     try:
         response = requests.get(ENDPOINT, headers=HEADERS, params=params)
         if response.status_code != 200:
-            raise requests.exceptions.RequestException 
+            raise requests.exceptions.RequestException
         return response.json()
     except requests.exceptions.RequestException as e:
         raise SystemExit(e)
@@ -61,8 +61,7 @@ def get_api_answer(current_timestamp):
 def check_response(response):
     if response == {}:
         raise TypeError('Пустой словарь в ответе')
-    if (isinstance(response, dict) and 
-       isinstance(response['homeworks'], list)):
+    if isinstance(response, dict) and isinstance(response['homeworks'], list):
         return response['homeworks']
     else:
         raise TypeError('Unable to parse response, invalid JSON.')
@@ -76,14 +75,12 @@ def parse_status(homework):
 
 
 def check_tokens():
-    if (
-        PRACTICUM_TOKEN is None or 
-        TELEGRAM_TOKEN is None or 
-        TELEGRAM_CHAT_ID is None or 
-        PRACTICUM_TOKEN == '' or 
-        TELEGRAM_TOKEN == '' or 
-        TELEGRAM_CHAT_ID == ''
-    ):
+    if (PRACTICUM_TOKEN is None
+       or TELEGRAM_TOKEN is None
+       or TELEGRAM_CHAT_ID is None
+       or PRACTICUM_TOKEN == ''
+       or TELEGRAM_TOKEN == ''
+       or TELEGRAM_CHAT_ID == ''):
         logger.critical('отсутствуют обязательные переменные окружения')
         return False
     else:
@@ -98,7 +95,7 @@ def main():
     previouse_status = ''
 
     while True:
-        
+
         try:
             response = get_api_answer(current_timestamp)
             homework = check_response(response)[0]
@@ -107,7 +104,7 @@ def main():
                 send_message(bot, current_status)
 
             time.sleep(RETRY_TIME)
-            current_timestamp = int(time.time() - 60 * 60 * 24 * 30)         
+            current_timestamp = int(time.time() - 60 * 60 * 24 * 30)
             previouse_status = current_status
 
         except Exception as error:
