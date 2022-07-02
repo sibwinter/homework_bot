@@ -42,11 +42,10 @@ HOMEWORK_STATUSES = {
 
 
 def send_message(bot, message):
-    """ Отправка сообщения в чат.
+    """Отправка сообщения в чат.
 
     Отправляем заранее сформированное сообщение через чат-бот.
     """
-
     try:
         bot.send_message(TELEGRAM_CHAT_ID, message)
         logger.info(f'Сообщение отправлено: {message}')
@@ -61,7 +60,6 @@ def get_api_answer(current_timestamp):
     Если статут ответа 200, то отпраляем в качестве
     значения функции словарь из json
     """
-
     timestamp = current_timestamp or int(time.time())
     params = {'from_date': timestamp}
     try:
@@ -132,7 +130,6 @@ def check_tokens():
 
 def main():
     """Основная логика работы бота."""
-
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     current_timestamp = int(time.time() - 60 * 60 * 24 * 30)
     previouse_status = ''
