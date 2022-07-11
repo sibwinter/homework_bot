@@ -1,5 +1,4 @@
 
-from cmath import e
 from http import HTTPStatus
 import os
 import time
@@ -15,11 +14,14 @@ import exceptions as exc
 
 load_dotenv()
 
+
 def logging_init():
     logging.basicConfig(
         filename='homework_bot/program.log',
-        format='%(asctime)s, %(levelname)s,%(funcName)s, %(lineno)d, %(message)s, %(name)s'
+        format='%(asctime)s, %(levelname)s,%(funcName)s,\
+                %(lineno)d, %(message)s, %(name)s'
     )
+
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -59,7 +61,6 @@ def send_message(bot, message):
         logger.info(f'Сообщение отправлено: {message}')
 
 
-
 def get_api_answer(current_timestamp):
     """Посылаем запрос к API и получаем ответ.
 
@@ -67,19 +68,15 @@ def get_api_answer(current_timestamp):
     Если статут ответа 200, то отпраляем в качестве
     значения функции словарь из json
     """
-    timestamp = current_timestamp or int(time.time())
-    params = {'from_date': timestamp}
+    params = {'from_date': current_timestamp}
     try:
         response = requests.get(ENDPOINT, headers=HEADERS, params=params)
-        if response.status_code != HTTPStatus.OK :
-            logger.error(
-                f'Эндпоинт Яндекс.Практикум API недоступен, статут: \
-                {response.status_code}'
-            )
-            raise requests.exceptions.RequestException
+        if response.status_code != HTTPStatus.OK:
+            raise Exception('Ошибка при получении ответа с сервера')
+        logger.info('Соединение с сервером устанолено')
         return response.json()
-    except requests.exceptions.RequestException as e:
-        raise SystemExit(e)
+    except Exception as e:
+        raise Exception(e)
 
 
 def check_response(response):
@@ -91,13 +88,17 @@ def check_response(response):
     В случае некорректности логируем ошибки.
     """
     try:
-        if isinstance(response, dict) and isinstance(response['homeworks'], list):
-            logger.info('Статус ответа API проверен, все ок')
+        if (
+                isinstance(response, dict)
+                and isinstance(response['homeworks'], list)
+        ):
             return response['homeworks']
-    except  KeyError as e:
-        logger.error(f'Нет ключа "homeworks" в словаре response : {e}')
+    except TypeError as e:
+        logger.error(f'{e}: Unable to parse response, invalid JSON.')
     else:
-        logger.info('Ответ API проверен. Словарь не пустой и содержит ключ "homeworks"')
+        logger.error('Нет нужных ключей в ответе API')
+        logger.info('Статус ответа API проверен, все ок')
+        raise ()
 
 
 def parse_status(homework):
@@ -106,19 +107,13 @@ def parse_status(homework):
     Находим в словаре домашней работы значения ключей "homework_name"
     и "status". Если все хорошо то возвращаем строку с ответом для бота
     """
-    try:
-        homework_name = homework['homework_name']
-        homework_status = homework['status'] 
-    except KeyError as e:
-        logger.error(f'Нет ключа "homework_name" в словаре homework : {e}')
-    try:
-        verdict = HOMEWORK_VERDICTS[homework_status]
-    except exc.ParseStatusException as e:
-        logger.error(
-            f'Ошибка {e} \
-            Недокументированный статус домашней работы в ответе API \
-            получен статус: {homework_status} \
-            ожидается статус из словаря {HOMEWORK_VERDICTS}')
+
+    if homework['homework_name'] is None or homework['status'] is None:
+        raise KeyError('Нет статуса работы')
+
+    homework_name = homework['homework_name']
+    homework_status = homework['status']
+    verdict = HOMEWORK_VERDICTS[homework_status]
     logger.info('Статус работы изменился, новый статус: {verdict}')
     return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
@@ -144,7 +139,6 @@ def main():
 
         try:
             response = get_api_answer(current_timestamp)
-            
             homework = check_response(response)[0]
             current_status = parse_status(homework)
             if current_status != previouse_status:
