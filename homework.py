@@ -13,13 +13,13 @@ from dotenv import load_dotenv
 import exceptions as exc
 
 
+load_dotenv()
 
-
-
-logging.basicConfig(
-    filename='program.log',
-    format='%(asctime)s, %(levelname)s,%(funcName)s, %(lineno)d, %(message)s, %(name)s'
-)
+def logging_init():
+    logging.basicConfig(
+        filename='homework_bot/program.log',
+        format='%(asctime)s, %(levelname)s,%(funcName)s, %(lineno)d, %(message)s, %(name)s'
+    )
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -165,5 +165,5 @@ def main():
 
 
 if __name__ == '__main__':
-    load_dotenv()
+    logging_init()
     main()
