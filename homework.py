@@ -16,6 +16,8 @@ load_dotenv()
 
 
 def logging_init():
+    """Инициализируем конфиг логгера."""
+
     logging.basicConfig(
         filename='homework_bot/program.log',
         format='%(asctime)s, %(levelname)s,%(funcName)s,\
