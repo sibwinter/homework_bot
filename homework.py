@@ -17,7 +17,6 @@ load_dotenv()
 
 def logging_init():
     """Инициализируем конфиг логгера."""
-
     logging.basicConfig(
         filename='homework_bot/program.log',
         format='%(asctime)s, %(levelname)s,%(funcName)s,\
@@ -109,7 +108,6 @@ def parse_status(homework):
     Находим в словаре домашней работы значения ключей "homework_name"
     и "status". Если все хорошо то возвращаем строку с ответом для бота
     """
-
     if homework['homework_name'] is None or homework['status'] is None:
         raise KeyError('Нет статуса работы')
 
