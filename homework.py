@@ -126,7 +126,7 @@ def check_tokens():
 
 
 def main():
-    """Основная логика работы бота."""  
+    """Основная логика работы бота."""
     try:
         check_tokens()
     except ValueError:
@@ -142,19 +142,9 @@ def main():
 
         try:
             response = get_api_answer(current_timestamp)
-
-            try:
-                check_response(response)
-            except TypeError as e:
-                logger.error(f'{e}: Ошибка парсинга данных, неверный JSON.')
-
             if check_response(response):
                 homework = check_response(response)[0]
-                try:
-                    current_status = parse_status(homework)
-                except KeyError('Нет статуса работы') as e:
-                    logger.error(f'Нет статуса работы, ошика словаря: {e}')
-
+                current_status = parse_status(homework)
                 if current_status != previouse_status:
                     try:
                         send_message(bot, current_status)
@@ -170,6 +160,7 @@ def main():
 
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
+            logger.error(f'Сбой в работе программы: {error}')
             send_message(bot, message)
             time.sleep(RETRY_TIME)
 
