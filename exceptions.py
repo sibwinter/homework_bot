@@ -1,8 +1,5 @@
-class SendMessageException(Exception):
-    pass
 
-
-class ParseStatusException(Exception):
+class RequestException(Exception):
     pass
 
 
