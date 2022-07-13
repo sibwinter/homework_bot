@@ -4,6 +4,7 @@ import os
 import time
 import logging
 from logging.handlers import RotatingFileHandler
+from urllib.error import HTTPError
 
 import telegram
 import requests
@@ -17,19 +18,15 @@ load_dotenv()
 
 def logging_init():
     """Инициализируем конфиг логгера."""
-    logging.basicConfig(
-        filename='homework_bot/program.log',
-        format='%(asctime)s, %(levelname)s,%(funcName)s,\
-                %(lineno)d, %(message)s, %(name)s'
-    )
 
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-handler = RotatingFileHandler('bot.log', maxBytes=50000000, backupCount=5)
+handler = RotatingFileHandler('program.log', maxBytes=50000000, backupCount=5)
 logger.addHandler(handler)
 formatter = logging.Formatter(
-    '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    '%(asctime)s, %(levelname)s,%(funcName)s,\
+                %(lineno)d, %(message)s, %(name)s'
 )
 handler.setFormatter(formatter)
 
@@ -56,8 +53,9 @@ def send_message(bot, message):
     """
     try:
         bot.send_message(TELEGRAM_CHAT_ID, message)
-    except exc.SendMessageException as e:
-        logger.error(f'Сообщение не отправлено, ошибка : {e}')
+    except:
+        raise telegram.error.TelegramError
+      # logger.error(f'Сообщение не отправлено, ошибка : {e}')
     else:
         logger.info(f'Сообщение отправлено: {message}')
 
@@ -73,11 +71,12 @@ def get_api_answer(current_timestamp):
     try:
         response = requests.get(ENDPOINT, headers=HEADERS, params=params)
         if response.status_code != HTTPStatus.OK:
-            raise Exception('Ошибка при получении ответа с сервера')
+            raise HTTPError('Ошибка при получении ответа с сервера.',
+                              f'Код ответа: {response.status_code}')
         logger.info('Соединение с сервером устанолено')
         return response.json()
-    except Exception as e:
-        raise Exception(e)
+    except:
+        raise requests.exceptions.RequestException('Не удалось получить ответ от сервера.')
 
 
 def check_response(response):
@@ -88,18 +87,18 @@ def check_response(response):
         - в словаре есть нужные ключи: "homeworks"
     В случае некорректности логируем ошибки.
     """
-    try:
-        if (
-                isinstance(response, dict)
-                and isinstance(response['homeworks'], list)
-        ):
-            return response['homeworks']
-    except TypeError as e:
-        logger.error(f'{e}: Unable to parse response, invalid JSON.')
-    else:
-        logger.error('Нет нужных ключей в ответе API')
+    
+    if (
+        isinstance(response, dict)
+        and isinstance(response['homeworks'], list)
+    ):
         logger.info('Статус ответа API проверен, все ок')
-        raise ()
+        return response['homeworks']
+    else:
+        raise TypeError('Unable to parse response, invalid JSON.')
+        #logger.error(f'{e}: Unable to parse response, invalid JSON.')
+    
+        
 
 
 def parse_status(homework):
@@ -108,7 +107,7 @@ def parse_status(homework):
     Находим в словаре домашней работы значения ключей "homework_name"
     и "status". Если все хорошо то возвращаем строку с ответом для бота
     """
-    if homework['homework_name'] is None or homework['status'] is None:
+    if homework.get('homework_name') == None or homework.get('status') == None:
         raise KeyError('Нет статуса работы')
 
     homework_name = homework['homework_name']
@@ -132,7 +131,7 @@ def check_tokens():
 def main():
     """Основная логика работы бота."""
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
-    current_timestamp = int(time.time())
+    current_timestamp = int(time.time() - 60*60*24*30)
     previouse_status = ''
 
     while True:
@@ -142,7 +141,10 @@ def main():
             homework = check_response(response)[0]
             current_status = parse_status(homework)
             if current_status != previouse_status:
-                send_message(bot, current_status)
+                try:
+                    send_message(bot, current_status)
+                except telegram.error.TelegramError as e:
+                    logger.error(f'Сообщение не отправлено, ошибка : {e}')
             else:
                 logger.debug('Статус не изменился')
 
