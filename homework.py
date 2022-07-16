@@ -86,20 +86,21 @@ def check_response(response):
         - в словаре есть нужные ключи: "homeworks"
     В случае некорректности логируем ошибки.
     """
-    if not isinstance(response, dict):
-        raise HomeworkBotException(
+    
+    if isinstance(response, dict) is False:
+        raise TypeError(
             'ответ сервера не является словарем JSON.')
     if response.get('homeworks') is None:
-        raise HomeworkBotException(
+        raise KeyError(
             'Нет ключа "homeworks" в словаре response')
     if response.get('current_date') is None:
-        raise HomeworkBotException(
+        raise KeyError(
             'Нет ключа "current_date" в словаре response')
     if not isinstance(response['homeworks'], list):
-        raise HomeworkBotException(
+        raise TypeError(
             'Значение словаря "homeworks" не является списком.')
     if not isinstance(response['current_date'], int):
-        raise HomeworkBotException(
+        raise KeyError(
             'Значение словаря "current_date" не является целым числом.')
     return response['homeworks']
 
@@ -110,11 +111,11 @@ def parse_status(homework):
     Находим в словаре домашней работы значения ключей "homework_name"
     и "status". Если все хорошо то возвращаем строку с ответом для бота
     """
-    if homework.get('homework_name') is None:
-        raise HomeworkBotException(
+    if not homework.get('homework_name', None):
+        raise KeyError(
             'Нет ключа "homework_name" в словаре homework')
-    if homework.get('status') is None:
-        raise HomeworkBotException(
+    if not homework.get('status', None):
+        raise KeyError(
             'Нет ключа "status" в словаре homework')
 
     homework_name = homework['homework_name']
@@ -171,6 +172,15 @@ def main():
             message = f'Сбой в работе программы: {error}'
             logger.error(f'Сбой в работе программы: {error}')
             send_message(bot, message)
+        except TypeError as error:
+            message = f'Сбой в работе программы: {error}'
+            logger.error(f'Сбой в работе программы: {error}')
+            send_message(bot, message)
+        except KeyError as error:
+            message = f'Сбой в работе программы: {error}'
+            logger.error(f'Сбой в работе программы: {error}')
+            send_message(bot, message)
+        
         finally:
             time.sleep(RETRY_TIME)
 
