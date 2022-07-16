@@ -86,7 +86,6 @@ def check_response(response):
         - в словаре есть нужные ключи: "homeworks"
     В случае некорректности логируем ошибки.
     """
-    
     if isinstance(response, dict) is False:
         raise TypeError(
             'ответ сервера не является словарем JSON.')
@@ -160,7 +159,7 @@ def main():
                         send_message(bot, current_status)
                         current_timestamp = response['current_date']
                         previouse_status = current_status
-                    except telegram.error.TelegramError as e:
+                    except TelegramException as e:
                         logger.error(f'Сообщение не отправлено, ошибка : {e}')
                 else:
                     logger.info('Статус не изменился')
@@ -172,15 +171,10 @@ def main():
             message = f'Сбой в работе программы: {error}'
             logger.error(f'Сбой в работе программы: {error}')
             send_message(bot, message)
-        except TypeError as error:
+        except Exception as error:
             message = f'Сбой в работе программы: {error}'
             logger.error(f'Сбой в работе программы: {error}')
             send_message(bot, message)
-        except KeyError as error:
-            message = f'Сбой в работе программы: {error}'
-            logger.error(f'Сбой в работе программы: {error}')
-            send_message(bot, message)
-        
         finally:
             time.sleep(RETRY_TIME)
 
