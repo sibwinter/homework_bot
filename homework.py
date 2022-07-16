@@ -12,13 +12,13 @@ from dotenv import load_dotenv
 from exceptions import HomeworkBotException, TelegramException
 
 
-
 load_dotenv()
-
-
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-handler = RotatingFileHandler('logs\program.log', maxBytes=50000000, backupCount=5)
+handler = RotatingFileHandler(
+    'logs\\program.log',
+    maxBytes=50000000,
+    backupCount=5)
 logger.addHandler(handler)
 formatter = logging.Formatter(
     '%(asctime)s, %(levelname)s,%(funcName)s,\
@@ -87,16 +87,22 @@ def check_response(response):
     В случае некорректности логируем ошибки.
     """
     if not isinstance(response, dict):
-        raise HomeworkBotException('ответ сервера не является словарем JSON.')
+        raise HomeworkBotException(
+            'ответ сервера не является словарем JSON.')
     if response.get('homeworks') is None:
-        raise HomeworkBotException('Нет ключа "homeworks" в словаре response')
+        raise HomeworkBotException(
+            'Нет ключа "homeworks" в словаре response')
     if response.get('current_date') is None:
-        raise HomeworkBotException('Нет ключа "current_date" в словаре response')
+        raise HomeworkBotException(
+            'Нет ключа "current_date" в словаре response')
     if not isinstance(response['homeworks'], list):
-        raise HomeworkBotException('Значение словаря "homeworks" не является списком.')
+        raise HomeworkBotException(
+            'Значение словаря "homeworks" не является списком.')
     if not isinstance(response['current_date'], int):
-        raise HomeworkBotException('Значение словаря "current_date" не является целым числом.')
+        raise HomeworkBotException(
+            'Значение словаря "current_date" не является целым числом.')
     return response['homeworks']
+
 
 def parse_status(homework):
     """Парсим статус домашней работы.
@@ -105,15 +111,18 @@ def parse_status(homework):
     и "status". Если все хорошо то возвращаем строку с ответом для бота
     """
     if homework.get('homework_name') is None:
-        raise HomeworkBotException('Нет ключа "homework_name" в словаре homework')
+        raise HomeworkBotException(
+            'Нет ключа "homework_name" в словаре homework')
     if homework.get('status') is None:
-        raise HomeworkBotException('Нет ключа "status" в словаре homework')
+        raise HomeworkBotException(
+            'Нет ключа "status" в словаре homework')
 
     homework_name = homework['homework_name']
     homework_status = homework['status']
     if HOMEWORK_VERDICTS.get(homework_status) is None:
-        raise HomeworkBotException('Словарь HOMEWORK_VERDICTS',
-                       f'не содержит такого ключа {homework_status}')
+        raise HomeworkBotException(
+            'Словарь HOMEWORK_VERDICTS',
+            f'не содержит такого ключа {homework_status}')
     verdict = HOMEWORK_VERDICTS[homework_status]
     logger.info('Статус работы изменился, новый статус: {verdict}')
     return f'Изменился статус проверки работы "{homework_name}". {verdict}'
@@ -139,7 +148,10 @@ def main():
 
         try:
             response = get_api_answer(current_timestamp)
-            if check_response(response) and not check_response(response) is None:
+            if (
+                check_response(response)
+                and not check_response(response) is None
+            ):
                 homework = check_response(response)[0]
                 current_status = parse_status(homework)
                 if current_status != previouse_status:
