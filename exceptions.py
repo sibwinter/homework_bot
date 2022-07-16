@@ -1,7 +1,10 @@
 
-class RequestException(Exception):
+class HomeworkBotException(Exception):
     pass
 
 
-class MainFunctionException(Exception):
+
+class TelegramException(Exception):
     pass
+
+
