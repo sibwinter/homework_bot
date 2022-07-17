@@ -1,5 +1,6 @@
 from http import HTTPStatus
 import os
+import sys
 import time
 import logging
 from logging.handlers import RotatingFileHandler
@@ -9,7 +10,7 @@ import telegram
 import requests
 from dotenv import load_dotenv
 
-from exceptions import HomeworkBotException, TelegramException
+from exceptions import HomeworkBotException, RequestAPIException
 
 
 load_dotenv()
@@ -50,7 +51,7 @@ def send_message(bot, message):
     try:
         bot.send_message(TELEGRAM_CHAT_ID, message)
     except telegram.error.TelegramError as e:
-        raise TelegramException(
+        raise HomeworkBotException(
             f'Сообщение не отправлено: {message}.',
             f'Ошибка telegram-bot: {e}')
     else:
@@ -70,12 +71,18 @@ def get_api_answer(current_timestamp):
         if response.status_code != HTTPStatus.OK:
             raise HTTPError('Ошибка при получении ответа с сервера.',
                             f'Код ответа: {response.status_code}')
-        logger.info('Соединение с сервером устанолено')
-        return response.json()
+
     except requests.exceptions.RequestException(
         'Не удалось получить ответ от сервера.'
     ):
-        raise HomeworkBotException('Не удалось получить ответ от сервера.')
+        raise RequestAPIException(
+            'Ошибка при обращении к серверу.'
+            f'Код ответа: {response.status_code}')
+    else:
+        logger.info(
+            'От сервера получен ответ.'
+            f'Код ответа: {response.status_code}')
+        return response.json()
 
 
 def check_response(response):
@@ -120,7 +127,7 @@ def parse_status(homework):
     homework_name = homework['homework_name']
     homework_status = homework['status']
     if HOMEWORK_VERDICTS.get(homework_status) is None:
-        raise HomeworkBotException(
+        raise KeyError(
             'Словарь HOMEWORK_VERDICTS',
             f'не содержит такого ключа {homework_status}')
     verdict = HOMEWORK_VERDICTS[homework_status]
@@ -138,7 +145,7 @@ def main():
     """Основная логика работы бота."""
     if not check_tokens():
         logging.critical("Отсутствуют переменные окружения")
-        raise SystemExit()
+        raise sys.exit(0)
 
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     current_timestamp = int(time.time())
@@ -148,18 +155,19 @@ def main():
 
         try:
             response = get_api_answer(current_timestamp)
+            homework = check_response(response)
+            current_timestamp = response['current_date']
             if (
-                check_response(response)
-                and not check_response(response) is None
+                homework
+                and homework is not None
             ):
-                homework = check_response(response)[0]
-                current_status = parse_status(homework)
+                current_status = parse_status(homework[0])
                 if current_status != previouse_status:
                     try:
                         send_message(bot, current_status)
-                        current_timestamp = response['current_date']
+
                         previouse_status = current_status
-                    except TelegramException as e:
+                    except HomeworkBotException as e:
                         logger.error(f'Сообщение не отправлено, ошибка : {e}')
                 else:
                     logger.info('Статус не изменился')
@@ -168,9 +176,7 @@ def main():
                 send_message(bot, 'Статус домашней работы не изменился!')
 
         except HomeworkBotException as error:
-            message = f'Сбой в работе программы: {error}'
             logger.error(f'Сбой в работе программы: {error}')
-            send_message(bot, message)
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
             logger.error(f'Сбой в работе программы: {error}')
