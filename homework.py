@@ -1,4 +1,5 @@
 from http import HTTPStatus
+from json import JSONDecodeError
 import os
 import sys
 import time
@@ -10,7 +11,7 @@ import telegram
 import requests
 from dotenv import load_dotenv
 
-from exceptions import HomeworkBotException, RequestAPIException
+from exceptions import NotSendingMessageException, RequestAPIException
 
 
 load_dotenv()
@@ -51,7 +52,7 @@ def send_message(bot, message):
     try:
         bot.send_message(TELEGRAM_CHAT_ID, message)
     except telegram.error.TelegramError as e:
-        raise HomeworkBotException(
+        raise NotSendingMessageException(
             f'Сообщение не отправлено: {message}.',
             f'Ошибка telegram-bot: {e}')
     else:
@@ -71,6 +72,7 @@ def get_api_answer(current_timestamp):
         if response.status_code != HTTPStatus.OK:
             raise HTTPError('Ошибка при получении ответа с сервера.',
                             f'Код ответа: {response.status_code}')
+        answer = response.json()
 
     except requests.exceptions.RequestException(
         'Не удалось получить ответ от сервера.'
@@ -78,11 +80,13 @@ def get_api_answer(current_timestamp):
         raise RequestAPIException(
             'Ошибка при обращении к серверу.'
             f'Код ответа: {response.status_code}')
+    except JSONDecodeError as e:
+        raise RequestAPIException(f'Не удалось спарсить json. Ошибка: {e}')
     else:
         logger.info(
             'От сервера получен ответ.'
             f'Код ответа: {response.status_code}')
-        return response.json()
+        return answer
 
 
 def check_response(response):
@@ -93,14 +97,14 @@ def check_response(response):
         - в словаре есть нужные ключи: "homeworks"
     В случае некорректности логируем ошибки.
     """
-    if isinstance(response, dict) is False:
+    if not isinstance(response, dict):
         raise TypeError(
             'ответ сервера не является словарем JSON.')
     if response.get('homeworks') is None:
         raise KeyError(
             'Нет ключа "homeworks" в словаре response')
     if response.get('current_date') is None:
-        raise KeyError(
+        raise NotSendingMessageException(
             'Нет ключа "current_date" в словаре response')
     if not isinstance(response['homeworks'], list):
         raise TypeError(
@@ -117,12 +121,9 @@ def parse_status(homework):
     Находим в словаре домашней работы значения ключей "homework_name"
     и "status". Если все хорошо то возвращаем строку с ответом для бота
     """
-    if not homework.get('homework_name', None):
+    if not homework.get('homework_name'):
         raise KeyError(
             'Нет ключа "homework_name" в словаре homework')
-    if not homework.get('status', None):
-        raise KeyError(
-            'Нет ключа "status" в словаре homework')
 
     homework_name = homework['homework_name']
     homework_status = homework['status']
@@ -145,7 +146,7 @@ def main():
     """Основная логика работы бота."""
     if not check_tokens():
         logging.critical("Отсутствуют переменные окружения")
-        raise sys.exit(0)
+        raise sys.exit(1)
 
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     current_timestamp = int(time.time())
@@ -155,19 +156,16 @@ def main():
 
         try:
             response = get_api_answer(current_timestamp)
-            homework = check_response(response)
+            homeworks = check_response(response)
             current_timestamp = response['current_date']
-            if (
-                homework
-                and homework is not None
-            ):
-                current_status = parse_status(homework[0])
+            if homeworks:
+                current_status = parse_status(homeworks[0])
                 if current_status != previouse_status:
                     try:
                         send_message(bot, current_status)
 
                         previouse_status = current_status
-                    except HomeworkBotException as e:
+                    except NotSendingMessageException as e:
                         logger.error(f'Сообщение не отправлено, ошибка : {e}')
                 else:
                     logger.info('Статус не изменился')
@@ -175,7 +173,7 @@ def main():
             else:
                 send_message(bot, 'Статус домашней работы не изменился!')
 
-        except HomeworkBotException as error:
+        except NotSendingMessageException as error:
             logger.error(f'Сбой в работе программы: {error}')
         except Exception as error:
             message = f'Сбой в работе программы: {error}'

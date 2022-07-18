@@ -1,5 +1,5 @@
 
-class HomeworkBotException(Exception):
+class NotSendingMessageException(Exception):
     """Класс исключений для ошибок отправки сообщений телеграм-бота."""
 
     """Логирует ошибки, но не отправляет их в телеграм."""
