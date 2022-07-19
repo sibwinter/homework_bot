@@ -1,5 +1,4 @@
 from http import HTTPStatus
-from json import JSONDecodeError
 import os
 import sys
 import time
@@ -74,10 +73,11 @@ def get_api_answer(current_timestamp):
                             f'Код ответа: {response.status_code}')
         answer = response.json()
 
-    except requests.exceptions.RequestException:
+    except requests.exceptions.RequestException as e:
         raise RequestAPIException(
             'Ошибка при обращении к серверу.'
-            f'Код ответа: {response.status_code}')
+            f'Код ответа сервера: {response.status_code}.',
+            f'Ошибка: {e}')
     else:
         logger.info(
             'От сервера получен ответ.'
