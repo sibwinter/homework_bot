@@ -12,12 +12,11 @@ from dotenv import load_dotenv
 
 from exceptions import NotSendingMessageException, RequestAPIException
 
-
 load_dotenv()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 handler = RotatingFileHandler(
-    'logs\\program.log',
+    os.getcwd() + '/program.log',
     maxBytes=50000000,
     backupCount=5)
 logger.addHandler(handler)
