@@ -74,14 +74,10 @@ def get_api_answer(current_timestamp):
                             f'Код ответа: {response.status_code}')
         answer = response.json()
 
-    except requests.exceptions.RequestException(
-        'Не удалось получить ответ от сервера.'
-    ):
+    except requests.exceptions.RequestException:
         raise RequestAPIException(
             'Ошибка при обращении к серверу.'
             f'Код ответа: {response.status_code}')
-    except JSONDecodeError as e:
-        raise RequestAPIException(f'Не удалось спарсить json. Ошибка: {e}')
     else:
         logger.info(
             'От сервера получен ответ.'
@@ -125,8 +121,8 @@ def parse_status(homework):
         raise KeyError(
             'Нет ключа "homework_name" в словаре homework')
 
-    homework_name = homework['homework_name']
-    homework_status = homework['status']
+    homework_name = homework.get('homework_name')
+    homework_status = homework.get('status')
     if HOMEWORK_VERDICTS.get(homework_status) is None:
         raise KeyError(
             'Словарь HOMEWORK_VERDICTS',
